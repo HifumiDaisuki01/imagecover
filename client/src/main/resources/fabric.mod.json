@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "id": "imagecover",
+  "version": "${version}",
+  "name": "ImageCover Client",
+  "description": "全屏图片客户端：接收 ImageCover 服务端指令，全屏显示图片（用于剧情加载/演出）。",
+  "authors": ["KeranTechnology"],
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": {
+    "client": ["com.keran.imagecover.client.ImageCoverClient"]
+  },
+  "depends": {
+    "fabricloader": ">=0.15.0",
+    "minecraft": "~1.20.1",
+    "fabric-api": ">=0.92.0",
+    "java": ">=17"
+  }
+}

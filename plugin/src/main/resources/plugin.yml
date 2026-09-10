@@ -1,0 +1,21 @@
+name: ImageCover
+version: '1.0.0'
+main: com.keran.imagecover.ImageCoverPlugin
+api-version: '1.20'
+prefix: ImageCover
+authors: [KeranTechnology]
+description: 全屏图片演出插件：按区域/指定玩家/全员向装有配套客户端 Mod 的玩家全屏显示图片
+softdepend:
+  - PlaceholderAPI
+  - Multiverse-Core
+  - WorldGuard
+commands:
+  ic:
+    description: "全屏图片演出 (需对应 Fabric 客户端 Mod: imagecover)"
+    usage: /ic play <玩家|UUID|@a|@p|@r> <图片链接> <时长秒> | /ic setplay <玩家|@a|@p|@r> <set名称>
+    aliases: [imagecover]
+    permission: imagecover.use
+permissions:
+  imagecover.use:
+    description: 允许使用 /ic 全屏图片演出
+    default: op

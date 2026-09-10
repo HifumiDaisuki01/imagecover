@@ -1,0 +1,38 @@
+plugins {
+	id 'java'
+}
+
+group = 'com.keran'
+version = '1.0.0'
+
+java {
+	sourceCompatibility = JavaVersion.VERSION_17
+	targetCompatibility = JavaVersion.VERSION_17
+}
+
+repositories {
+	maven { url = 'https://repo.papermc.io/repository/maven-public/' }
+	maven { url = 'https://repo.extendedclip.com/content/repositories/placeholderapi/' }
+	maven { url = 'https://maven.enginehub.org/repo/' }
+	maven { url = 'https://maven.aliyun.com/repository/public' }
+	mavenCentral()
+}
+
+dependencies {
+	compileOnly 'io.papermc.paper:paper-api:1.20.1-R0.1-SNAPSHOT'
+	compileOnly 'me.clip:placeholderapi:2.11.6'
+	compileOnly 'com.sk89q.worldguard:worldguard-bukkit:7.0.9'
+	compileOnly 'com.sk89q.worldedit:worldedit-bukkit:7.2.15'
+}
+
+processResources {
+	def version = project.version
+	inputs.property 'version', version
+	filesMatching('plugin.yml') {
+		expand 'version': version
+	}
+}
+
+jar {
+	archiveBaseName = 'ImageCover'
+}

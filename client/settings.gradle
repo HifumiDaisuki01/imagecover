@@ -1,0 +1,26 @@
+pluginManagement {
+    repositories {
+        maven { url = 'https://maven.aliyun.com/repository/gradle-plugin' }
+        maven { url = 'https://maven.aliyun.com/repository/public' }
+        maven { url = 'https://maven.fabricmc.net/' }
+    }
+}
+
+dependencyResolutionManagement {
+    repositories {
+        maven { url = 'https://maven.aliyun.com/repository/public' }
+        maven { url = 'https://maven.fabricmc.net/' }
+    }
+}
+
+// Loom 会把 org.lwjgl 锁到自建 "MavenCentralLWJGL"（repo.maven.apache.org，本环境不可达）。
+// 预注册同名仓库指向阿里云镜像，Loom 发现同名即跳过锁死逻辑。
+gradle.beforeProject { p ->
+    p.repositories.maven {
+        name = 'MavenCentralLWJGL'
+        url = 'https://maven.aliyun.com/repository/public'
+        content { includeGroup 'org.lwjgl' }
+    }
+}
+
+rootProject.name = 'imagecover-client-1201'

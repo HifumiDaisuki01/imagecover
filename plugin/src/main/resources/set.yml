@@ -1,0 +1,18 @@
+# ImageCover 预设播放列表
+#
+# 写法一：直接列表 —— 淡入淡出沿用 config.yml 的全局设置
+testset01:
+  - url: "http://example.com/1.jpg"
+    duration: 1.1
+  - url: "http://example.com/2.jpg"
+    duration: 8.3
+  - "http://example.com/3.jpg 0.2s"     # 也支持这种 "链接 时长" 简写
+
+# 写法二：带独立淡入淡出开关 —— 本 set 不受 config.yml 影响
+testset02:
+  fade: false
+  images:
+    - url: "http://example.com/a.jpg"
+      duration: 2.0
+    - url: "http://example.com/b.jpg"
+      duration: 5.0
