@@ -1,5 +1,5 @@
 name: ImageCover
-version: '1.0.0'
+version: '1.0.1'
 main: com.keran.imagecover.ImageCoverPlugin
 api-version: '1.20'
 prefix: ImageCover
@@ -12,7 +12,7 @@ softdepend:
 commands:
   icv:
     description: "全屏图片演出 (需对应 Fabric 客户端 Mod: imagecover)"
-    usage: /icv play <玩家|UUID|@a|@p|@r> <图片链接> <时长秒> | /icv setplay <玩家|@a|@p|@r> <set名称>
+    usage: /icv play <玩家|UUID|@a|@p|@r> <图片链接> <时长秒> | /icv setplay <玩家|@a|@p|@r> <set名称> | /icv bg on|off|alpha <0-100>
     aliases: [imagecover]
     permission: imagecover.use
 permissions:

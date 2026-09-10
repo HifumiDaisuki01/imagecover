@@ -59,6 +59,8 @@ public class ImageCoverCommand implements CommandExecutor, TabCompleter {
 					return handleSetWgPlay(sender, args);
 				case "stop":
 					return handleStop(sender);
+				case "bg":
+					return handleBg(sender, args);
 				case "reload":
 					return handleReload(sender);
 				default:
@@ -258,6 +260,61 @@ public class ImageCoverCommand implements CommandExecutor, TabCompleter {
 		return true;
 	}
 
+	// -------------------------------------------------------------------- bg
+
+	/**
+	 * 背景遮罩全局开关（默认关闭）。
+	 *   /icv bg            查看当前状态
+	 *   /icv bg on|off     开关全屏黑底
+	 *   /icv bg alpha <0-100>  调整黑底不透明度
+	 *
+	 * 这里的改动只作用于内存，重启或 /icv reload 后回到 config.yml 的值。
+	 */
+	private boolean handleBg(CommandSender sender, String[] args) {
+		if (args.length < 2) {
+			sender.sendMessage("§6ImageCover 背景遮罩: " + (plugin.backgroundEnabled() ? "§a开启" : "§c关闭")
+					+ "§7（不透明度 " + Math.round(plugin.backgroundAlpha() * 100) + "%）");
+			sender.sendMessage("§f/icv bg on §7| §f/icv bg off §7| §f/icv bg alpha <0-100>");
+			sender.sendMessage("§7提示: 关闭后透明 PNG 可直接覆盖在游戏画面上（默认即关闭）");
+			return true;
+		}
+		String sub = args[1].toLowerCase(Locale.ROOT);
+		switch (sub) {
+			case "on":
+				plugin.setBackgroundEnabled(true);
+				sender.sendMessage("§a已开启背景遮罩（不透明度 " + Math.round(plugin.backgroundAlpha() * 100) + "%）");
+				return true;
+			case "off":
+				plugin.setBackgroundEnabled(false);
+				sender.sendMessage("§a已关闭背景遮罩（图片将直接覆盖在游戏画面上）");
+				return true;
+			case "alpha": {
+				if (args.length < 3) {
+					sender.sendMessage("§c用法: /icv bg alpha <0-100>");
+					return true;
+				}
+				double pct;
+				try {
+					pct = Double.parseDouble(args[2]);
+				} catch (NumberFormatException e) {
+					sender.sendMessage("§c不透明度无效: " + args[2] + "（应为 0~100 的数字）");
+					return true;
+				}
+				if (pct < 0 || pct > 100) {
+					sender.sendMessage("§c不透明度需在 0~100 之间");
+					return true;
+				}
+				plugin.setBackgroundAlpha((float) (pct / 100.0));
+				sender.sendMessage("§a背景遮罩不透明度已设为 " + Math.round(pct) + "%"
+						+ (plugin.backgroundEnabled() ? "" : " §7（注意：当前遮罩处于关闭状态）"));
+				return true;
+			}
+			default:
+				sender.sendMessage("§c用法: /icv bg on | /icv bg off | /icv bg alpha <0-100>");
+				return true;
+		}
+	}
+
 	// ------------------------------------------------------------ stop/reload
 
 	private boolean handleStop(CommandSender sender) {
@@ -273,7 +330,9 @@ public class ImageCoverCommand implements CommandExecutor, TabCompleter {
 	private boolean handleReload(CommandSender sender) {
 		plugin.reloadConfig();
 		plugin.setManager().reload();
-		sender.sendMessage("§aImageCover: config.yml 与 set.yml 已重载");
+		plugin.clearBackgroundOverride();
+		sender.sendMessage("§aImageCover: config.yml 与 set.yml 已重载（背景遮罩 " 
+				+ (plugin.backgroundEnabled() ? "§a开启" : "§c关闭") + "§a）");
 		return true;
 	}
 
@@ -415,7 +474,8 @@ public class ImageCoverCommand implements CommandExecutor, TabCompleter {
 		sender.sendMessage("§f/icv setplay <玩家|UUID|@a|@p|@r> <set名称>");
 		sender.sendMessage("§f/icv setplay <x> <y> <z> <世界名> <半径> <set名称>");
 		sender.sendMessage("§f/icv setwgplay <WorldGuard区域名> <set名称>");
-		sender.sendMessage("§f/icv stop §7(停止自己屏幕上的图片)   §f/icv reload §7(重载 set.yml)");
+		sender.sendMessage("§f/icv bg on|off|alpha <0-100> §7(背景遮罩，默认关闭)");
+		sender.sendMessage("§f/icv stop §7(停止自己屏幕上的图片)   §f/icv reload §7(重载配置)");
 	}
 
 	private static String[] slice(String[] args, int from) {
@@ -463,13 +523,16 @@ public class ImageCoverCommand implements CommandExecutor, TabCompleter {
 									  @NotNull String alias, @NotNull String[] args) {
 		List<String> out = new ArrayList<>();
 		if (args.length == 1) {
-			addFiltered(out, args[0], List.of("play", "setplay", "wgplay", "setwgplay", "stop", "reload"));
+			addFiltered(out, args[0], List.of("play", "setplay", "wgplay", "setwgplay", "stop", "bg", "reload"));
 			return out;
 		}
 		String sub = args[0].toLowerCase(Locale.ROOT);
 		switch (sub) {
 			case "play":
 				if (args.length == 2) addFiltered(out, args[1], selectorsAndPlayers());
+				break;
+			case "bg":
+				if (args.length == 2) addFiltered(out, args[1], List.of("on", "off", "alpha"));
 				break;
 			case "setplay":
 				if (args.length == 2) addFiltered(out, args[1], selectorsAndPlayers());

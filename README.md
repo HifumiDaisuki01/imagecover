@@ -3,27 +3,33 @@
 服务端用命令让装有配套客户端 Mod 的玩家屏幕**全屏显示图片**，用于剧情加载、过场演出、
 Boss 登场、公告海报等。支持**单图 / 预设列表(set) / 区域 / WorldGuard 区域 / 指定玩家 / 全员**，
 可设置每张图的显示时长（支持小数秒），并带 0.3s 淡入淡出，播完自动消失。
+**默认不铺背景遮罩**，透明背景的 PNG 可以直接覆盖在游戏画面上（适合做提示文本/UI 覆盖层）。
 
 ## 组件
 
 | 端 | 文件 | 说明 |
 | --- | --- | --- |
-| 服务端 | `ImageCover-1.0.0.jar` | Paper 1.20.1 插件（放 `plugins/`） |
-| 客户端 | `imagecover-client-1201-1.0.3.jar` | 1.20.1 Fabric 客户端 Mod（放 `mods/`，需 Fabric API） |
+| 服务端 | `ImageCover-1.0.1.jar` | Paper 1.20.1 插件（放 `plugins/`） |
+| 客户端 | `imagecover-client-1201-1.0.4.jar` | 1.20.1 Fabric 客户端 Mod（放 `mods/`，需 Fabric API） |
 
 两端通过 Fabric 插件消息通道通信：
 
 | 通道 | 载荷 |
 | --- | --- |
-| `icb:play` | `writeInt(count)`，随后每条：`writeInt(url字节长度)` + `write(url UTF-8)` + `writeLong(时长毫秒)` |
+| `icb:play` | `writeInt(2)`（协议版本） + `writeInt(count)` + `writeInt(fadeMs)` + `writeBoolean(背景遮罩开关)` + `writeFloat(背景不透明度)`，随后每条：`writeInt(url字节长度)` + `write(url UTF-8)` + `writeLong(时长毫秒)` |
 | `icb:stop` | 空 payload |
+
+> **协议 v1/v2 兼容**：客户端靠首字段是否为 `2` 区分协议版本。
+> 服务端可用 `config.yml` 的 `protocol: 1` 回退到旧格式（不含背景参数），
+> 以兼容尚未升级的 `v1.0.3` 及更早客户端 —— 此时背景遮罩不可用。
+> 新版客户端同时兼容新旧服务端。
 
 客户端收到 `play` 后**按顺序播放并预加载下一张**，每张显示指定时长；收到 `stop` 立刻清空并隐藏。
 
 ## 安装
 
 ### 服务端（Paper 1.20.1）
-1. 把 `ImageCover-1.0.0.jar` 放进 `plugins/`，重启服务器。
+1. 把 `ImageCover-1.0.1.jar` 放进 `plugins/`，重启服务器。
 2. 首次启动会在 `plugins/ImageCover/` 自动生成示例 `set.yml`。
 3. 可选软依赖（不装也能用，装了自动启用）：
    - **PlaceholderAPI**：命令参数支持 `%占位符%`（如 `%player_name%`）。
@@ -32,7 +38,7 @@ Boss 登场、公告海报等。支持**单图 / 预设列表(set) / 区域 / Wo
 
 ### 客户端
 每位需要看到图片的玩家，在 **1.20.1 Fabric** 环境（Fabric Loader 0.15+、Fabric API 0.92+、Java 17+）
-把 `imagecover-client-1201-1.0.3.jar` 放进 `mods/`。
+把 `imagecover-client-1201-1.0.4.jar` 放进 `mods/`。
 **没装 Mod 的玩家收不到、也不会报错**，不影响服务端执行。
 
 > 权限：需要 **OP** 或 `imagecover.use` 权限才能执行 `/icv`。
@@ -49,6 +55,7 @@ Boss 登场、公告海报等。支持**单图 / 预设列表(set) / 区域 / Wo
 /icv setplay <玩家|UUID|@a|@p|@r> <set名称>
 /icv setplay <x> <y> <z> <世界名> <半径> <set名称>
 /icv setwgplay <WorldGuard区域名> <set名称>
+/icv bg on|off|alpha <0-100>
 /icv stop
 /icv reload
 ```
@@ -145,9 +152,46 @@ testset02:
 Fabric 的 `HudRenderCallback` 与 `WorldRenderEvents.LAST` 都触发在聊天框**之前**，
 用它们会导致图片被聊天框遮挡（v1.0.2 及以前的问题）。
 
-> **注意**：演出期间图片是全屏不透明的，会盖住整个游戏界面。
+> **注意**：演出期间图片会铺满整个屏幕。默认**不铺背景遮罩**，因此图片中透明/半透明的
+> 区域会直接透出游戏画面（透明背景的 PNG 可用于"提示文本覆盖在游戏上"）。
+> 若需要"压暗游戏画面"的电影感，可开启背景遮罩（见下节）。
 > 打开任意界面（背包、菜单等）时客户端会**自动暂停绘制**，避免挡住 UI 导致无法操作；
 > 关闭界面后继续播放。
+
+
+## 背景遮罩（默认关闭）
+
+早期版本会在图片下方**无条件铺一层全屏黑底**，这带来一个反直觉的现象：
+
+> 不透明图片的淡入淡出"看起来没效果"，而透明图片的黑底却能看出淡入淡出。
+
+原因不是 alpha 没生效，而是**图片淡出时透出的是"同样在淡出的黑底"** ——
+两者几乎同色，肉眼只会觉得整体稍微变暗，直到最后一帧才"啪"地消失；
+透明图片之所以明显，是因为它的透明区域直接透出了游戏画面。
+
+因此 **v1.0.4 起默认不再铺背景遮罩**，图片直接覆盖在游戏画面上，
+淡入淡出清晰可见，透明 PNG 也能正常透出游戏。
+
+### config.yml
+```yaml
+background:
+  # 是否铺全屏黑色遮罩。默认 false（推荐保持关闭）
+  enabled: false
+  # 遮罩不透明度 0~100。0=完全透明（等同关闭），100=纯黑
+  # 设为 30~60 可得到"电影感压暗"：图片清楚，游戏画面隐约可见
+  alpha: 100
+```
+
+### 指令（临时全局，重启或 `/icv reload` 后回到配置文件值）
+```
+/icv bg            查看当前状态
+/icv bg on         开启背景遮罩
+/icv bg off        关闭背景遮罩
+/icv bg alpha 50   把遮罩不透明度设为 50%
+```
+
+> 背景遮罩需要**客户端 Mod v1.0.4+**。若服务器上还有旧客户端，
+> 可把 `config.yml` 的 `protocol` 设为 `1` 回退旧协议（此时遮罩不可用）。
 
 
 ## 淡入淡出配置
@@ -192,6 +236,15 @@ testset02:
 ③ 图片直链要能在浏览器直接打开、支持 https、格式为 jpg/png 等常见格式；
 ④ 区域命令的“世界名”要和服务器实际世界名一致（装了 Multiverse 也支持别名）。
 
+**Q：淡入淡出看不出来？（v1.0.3 及以前）**
+这是全屏黑底造成的错觉，不是 alpha 没生效 —— 图片淡出时透出的是同样在淡出的黑底，
+两者几乎同色所以看不出来。**升级到 v1.0.4 客户端 + v1.0.1 服务端**后背景遮罩默认关闭，
+淡入淡出即清晰可见。详见"背景遮罩"章节。
+
+**Q：透明 PNG 透不出游戏画面？**
+确认客户端是 v1.0.4+，且没有开启背景遮罩（`/icv bg` 查看，或 config.yml 里
+`background.enabled: false`）。旧版本会无条件铺黑底。
+
 **Q：图片拉伸/变形？**
 客户端按“覆盖全屏”缩放：保持比例、铺满屏幕、超出部分裁掉，居中显示。想不被裁切请用与
 屏幕比例接近（如 16:9）的图片。
@@ -222,7 +275,7 @@ testset02:
 ```bash
 cd imagecover-plugin
 JAVA_HOME=<JDK17+> gradle build --no-daemon
-# 产物: build/libs/ImageCover-1.0.0.jar
+# 产物: build/libs/ImageCover-1.0.1.jar
 ```
 依赖（compileOnly）：`io.papermc.paper:paper-api:1.20.1-R0.1-SNAPSHOT`、
 `me.clip:placeholderapi:2.11.6`、`com.sk89q.worldguard:worldguard-bukkit:7.0.9`、
@@ -232,7 +285,7 @@ JAVA_HOME=<JDK17+> gradle build --no-daemon
 ```bash
 cd imagecover-client-1201
 JAVA_HOME=<JDK17+> gradle build --no-daemon
-# 产物: build/libs/imagecover-client-1201-1.0.3.jar
+# 产物: build/libs/imagecover-client-1201-1.0.4.jar
 ```
 Fabric Loom 1.7.4 + Mojang 官方映射（mojmap）+ Fabric API `0.92.12+1.20.1` + Loader `0.19.5`。
 

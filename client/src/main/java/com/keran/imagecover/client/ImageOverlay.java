@@ -37,6 +37,18 @@ public final class ImageOverlay implements HudRenderCallback {
 	private static final Logger LOGGER = LoggerFactory.getLogger("imagecover");
 	/** 当前播放的淡入/淡出时长（毫秒），0 表示关闭淡入淡出 */
 	private long fadeMs = 300L;
+	/**
+	 * 是否在图片下方铺一层全屏纯色遮罩（默认关闭）。
+	 *
+	 * <p>注意：这层遮罩曾经是"淡入淡出看起来没效果"的元凶——图片淡出时透出的是
+	 * 一层同样在淡出的、与图片几乎同色的黑底，肉眼只会觉得整体稍微变暗，
+	 * 直到最后一帧才"啪"地消失。透明背景的图片之所以能看到淡入淡出，
+	 * 是因为它的透明区域直接透出了游戏画面。默认关闭后，图片的 alpha
+	 * 才会真正作用在游戏画面上，淡入淡出清晰可见。</p>
+	 */
+	private boolean bgEnabled = false;
+	/** 背景遮罩的 alpha（0.0~1.0），仅在 {@link #bgEnabled} 为 true 时生效 */
+	private float bgAlpha = 1.0f;
 	private static final String UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
 			+ "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
 
@@ -81,7 +93,20 @@ public final class ImageOverlay implements HudRenderCallback {
 
 	/** 开始播放一组图片（主线程） */
 	public void play(List<Entry> list, long fadeMs) {
+		play(list, fadeMs, false, 1.0f);
+	}
+
+	/**
+	 * 开始播放一组图片（主线程）。
+	 *
+	 * @param fadeMs     淡入/淡出时长（毫秒），0 表示关闭
+	 * @param bgEnabled  是否铺全屏背景遮罩（旧客户端行为为 true；默认 false）
+	 * @param bgAlpha    背景遮罩不透明度 0.0~1.0
+	 */
+	public void play(List<Entry> list, long fadeMs, boolean bgEnabled, float bgAlpha) {
 		this.fadeMs = Math.max(0L, fadeMs);
+		this.bgEnabled = bgEnabled;
+		this.bgAlpha = Math.max(0f, Math.min(1f, bgAlpha));
 		generation++;
 		releaseAll();
 		this.entries = list;
@@ -163,9 +188,15 @@ public final class ImageOverlay implements HudRenderCallback {
 		RenderSystem.enableBlend();
 		RenderSystem.defaultBlendFunc();
 
-		// 黑底（同样淡入淡出，避免淡入时突兀）
-		RenderSystem.setShaderColor(0f, 0f, 0f, alpha);
-		g.fill(0, 0, w, h, 0xFFFFFFFF);
+		// 背景遮罩（默认关闭）。
+		// 早期版本无条件铺一层全屏黑底，导致不透明图片淡出时透出的是"同样在淡出的黑底"，
+		// 视觉上几乎没有变化；关闭后图片的 alpha 才真正作用于游戏画面。
+		if (bgEnabled && bgAlpha > 0f) {
+			// 背景比图片先到达满不透明：淡入时更柔和，淡出时更早让位给游戏画面
+			float bgA = Math.min(1f, alpha * 1.25f) * bgAlpha;
+			RenderSystem.setShaderColor(0f, 0f, 0f, bgA);
+			g.fill(0, 0, w, h, 0xFFFFFFFF);
+		}
 
 		// 图片：保持比例、铺满屏幕（cover）、居中、超出裁掉
 		ResourceLocation tex = cur.texture;
@@ -175,6 +206,9 @@ public final class ImageOverlay implements HudRenderCallback {
 			int dh = Math.max(1, Math.round(cur.texH * scale));
 			int dx = (w - dw) / 2;
 			int dy = (h - dh) / 2;
+			// blit 走 position_tex shader，顶点格式不含颜色，透明度完全由 ColorModulator
+			// （即 setShaderColor 的 alpha）决定，且只在 alpha==0 时才 discard，
+			// 因此这里传入的 alpha 会得到真正平滑的淡入淡出。
 			RenderSystem.setShaderColor(1f, 1f, 1f, alpha);
 			g.enableScissor(0, 0, w, h);
 			g.blit(tex, dx, dy, dw, dh, 0f, 0f, cur.texW, cur.texH, cur.texW, cur.texH);
