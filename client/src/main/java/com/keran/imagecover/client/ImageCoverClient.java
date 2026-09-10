@@ -2,7 +2,6 @@ package com.keran.imagecover.client;
 
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.resources.ResourceLocation;
 
 import java.nio.charset.StandardCharsets;
@@ -29,7 +28,10 @@ public class ImageCoverClient implements ClientModInitializer {
 
 	@Override
 	public void onInitializeClient() {
-		HudRenderCallback.EVENT.register(ImageOverlay.INSTANCE);
+		// 注意：这里刻意不注册 HudRenderCallback。
+		// 它的触发时机早于聊天框渲染，会导致全屏图片被左下角聊天框遮挡；
+		// 现在改由 GuiMixin 注入 Gui.render() 的末尾来绘制，
+		// 保证图片盖在所有 HUD 元素之上（见 ImageOverlay#renderTopmost）。
 
 		ClientPlayNetworking.registerGlobalReceiver(PLAY_CHANNEL, (client, handler, buf, responseSender) -> {
 			List<ImageOverlay.Entry> list = new ArrayList<>();

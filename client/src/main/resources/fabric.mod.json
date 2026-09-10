@@ -10,6 +10,12 @@
   "entrypoints": {
     "client": ["com.keran.imagecover.client.ImageCoverClient"]
   },
+  "mixins": [
+    {
+      "config": "imagecover.client.mixins.json",
+      "environment": "client"
+    }
+  ],
   "depends": {
     "fabricloader": ">=0.15.0",
     "minecraft": "~1.20.1",

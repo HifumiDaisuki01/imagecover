@@ -23,6 +23,9 @@ import java.util.concurrent.Executors;
  * 全屏图片覆盖层：按顺序播放一组图片，每张显示指定时长（淡入/淡出时长由服务端下发，0 表示关闭），
  * 全部播完自动消失；收到 stop 立刻清空并隐藏。
  *
+ * <p>渲染入口是 {@link #renderTopmost(GuiGraphics)}，由 {@code GuiMixin} 注入
+ * {@code Gui.render()} 末尾调用，保证图片画在聊天框、计分板等所有 HUD 之上。</p>
+ *
  * 线程模型：
  *  - 下载/解码在后台线程（download + NativeImage 解码）
  *  - 纹理注册、播放状态、渲染都在主线程（Minecraft.execute）
@@ -106,11 +109,33 @@ public final class ImageOverlay implements HudRenderCallback {
 
 	// --------------------------------------------------------------- 渲染
 
+	/**
+	 * @deprecated 保留 Fabric 的 HUD 回调仅为兼容，
+	 * 实际渲染走 {@link #renderTopmost(GuiGraphics)}（由 GuiMixin 在所有 HUD 之后调用）。
+	 *
+	 * <p>这里刻意不做任何绘制：HudRenderCallback 的时机早于聊天框，
+	 * 在这里画会导致图片被聊天框遮挡。</p>
+	 */
 	@Override
+	@Deprecated
 	public void onHudRender(GuiGraphics g, float tickDelta) {
+		// 空实现，见上面的说明
+	}
+
+	/**
+	 * 在所有 HUD 元素（含聊天框、计分板、Tab 列表）之后渲染。
+	 *
+	 * <p>由 {@code GuiMixin} 注入 {@code Gui.render()} 的 TAIL 调用，
+	 * 因此这里的绘制一定盖在最上层。</p>
+	 *
+	 * <p>注意：本方法只在主线程被调用，因此可以安全地读写播放状态。</p>
+	 */
+	public void renderTopmost(GuiGraphics g) {
 		if (!active || entries == null || entries.isEmpty()) return;
 		Minecraft mc = Minecraft.getInstance();
 		if (mc.options.hideGui) return;
+		// 打开任何界面（背包、菜单等）时不绘制，避免盖住 UI 导致玩家无法操作
+		if (mc.screen != null) return;
 
 		Entry cur = entries.get(index);
 		if (startMs == 0L) {

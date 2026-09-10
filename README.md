@@ -9,7 +9,7 @@ Boss 登场、公告海报等。支持**单图 / 预设列表(set) / 区域 / Wo
 | 端 | 文件 | 说明 |
 | --- | --- | --- |
 | 服务端 | `ImageCover-1.0.0.jar` | Paper 1.20.1 插件（放 `plugins/`） |
-| 客户端 | `imagecover-client-1201-1.0.0.jar` | 1.20.1 Fabric 客户端 Mod（放 `mods/`，需 Fabric API） |
+| 客户端 | `imagecover-client-1201-1.0.3.jar` | 1.20.1 Fabric 客户端 Mod（放 `mods/`，需 Fabric API） |
 
 两端通过 Fabric 插件消息通道通信：
 
@@ -32,7 +32,7 @@ Boss 登场、公告海报等。支持**单图 / 预设列表(set) / 区域 / Wo
 
 ### 客户端
 每位需要看到图片的玩家，在 **1.20.1 Fabric** 环境（Fabric Loader 0.15+、Fabric API 0.92+、Java 17+）
-把 `imagecover-client-1201-1.0.0.jar` 放进 `mods/`。
+把 `imagecover-client-1201-1.0.3.jar` 放进 `mods/`。
 **没装 Mod 的玩家收不到、也不会报错**，不影响服务端执行。
 
 > 权限：需要 **OP** 或 `imagecover.use` 权限才能执行 `/icv`。
@@ -135,6 +135,21 @@ testset02:
 - 若某张图片下载/解码失败，客户端会**跳过该张继续下一张**，不会卡死。
 
 
+## 渲染层级（图片盖在聊天框之上）
+
+图片会被绘制在**所有 HUD 元素之上** —— 包括聊天框、计分板侧边栏、Tab 玩家列表。
+因此左下角刷聊天消息时，图片**不会被聊天框截断**。
+
+实现方式：客户端用 Mixin 注入 `Gui.render()` 的末尾（`@At("TAIL")`），
+在所有原版 HUD 绘制完成后才画图片。这是唯一可靠的置顶方式 ——
+Fabric 的 `HudRenderCallback` 与 `WorldRenderEvents.LAST` 都触发在聊天框**之前**，
+用它们会导致图片被聊天框遮挡（v1.0.2 及以前的问题）。
+
+> **注意**：演出期间图片是全屏不透明的，会盖住整个游戏界面。
+> 打开任意界面（背包、菜单等）时客户端会**自动暂停绘制**，避免挡住 UI 导致无法操作；
+> 关闭界面后继续播放。
+
+
 ## 淡入淡出配置
 
 ### config.yml（单张图片指令的全局开关）
@@ -217,7 +232,7 @@ JAVA_HOME=<JDK17+> gradle build --no-daemon
 ```bash
 cd imagecover-client-1201
 JAVA_HOME=<JDK17+> gradle build --no-daemon
-# 产物: build/libs/imagecover-client-1201-1.0.0.jar
+# 产物: build/libs/imagecover-client-1201-1.0.3.jar
 ```
 Fabric Loom 1.7.4 + Mojang 官方映射（mojmap）+ Fabric API `0.92.12+1.20.1` + Loader `0.19.5`。
 
