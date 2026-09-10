@@ -97,11 +97,18 @@ public class ImageCoverCommand implements CommandExecutor, TabCompleter {
 				sender.sendMessage("§c半径无效: " + rest[4]);
 				return true;
 			}
+			// 区域形式必须带时长；末参不是时长就直接报错，避免把链接末尾数字误判成时长
 			long ms;
 			try {
 				ms = Durations.parseMillis(rest[rest.length - 1]);
 			} catch (NumberFormatException e) {
 				sender.sendMessage("§c时长无效: " + rest[rest.length - 1]);
+				return true;
+			}
+			// 链接后面多出来的参数只能是"被空格截断的链接"，直接提示而不是静默拼成错误 URL
+			if (rest.length - 1 > 5) {
+				sender.sendMessage("§c图片链接中疑似含空格（Minecraft 命令无法保留空格）。");
+				sender.sendMessage("§7请先对链接做 URL 编码（空格写成 %20），或改用不含空格的直链。");
 				return true;
 			}
 			String url = join(rest, 5, rest.length - 1);
@@ -129,6 +136,11 @@ public class ImageCoverCommand implements CommandExecutor, TabCompleter {
 			ms = Durations.parseMillis(rest[rest.length - 1]);
 		} catch (NumberFormatException e) {
 			sender.sendMessage("§c时长无效: " + rest[rest.length - 1]);
+			return true;
+		}
+		if (rest.length - 1 > 2) {
+			sender.sendMessage("§c图片链接中疑似含空格（Minecraft 命令无法保留空格）。");
+			sender.sendMessage("§7请先对链接做 URL 编码（空格写成 %20），或改用不含空格的直链。");
 			return true;
 		}
 		String url = join(rest, 1, rest.length - 1);
@@ -161,6 +173,11 @@ public class ImageCoverCommand implements CommandExecutor, TabCompleter {
 			sender.sendMessage("§c时长无效: " + rest[rest.length - 1]);
 			return true;
 		}
+		if (rest.length - 1 > 2) {
+			sender.sendMessage("§c图片链接中疑似含空格（Minecraft 命令无法保留空格）。");
+			sender.sendMessage("§7请先对链接做 URL 编码（空格写成 %20），或改用不含空格的直链。");
+			return true;
+		}
 		String url = join(rest, 1, rest.length - 1);
 		if (url.isEmpty() || ms <= 0) {
 			sender.sendMessage("§c图片链接不能为空、时长必须大于 0");
@@ -180,7 +197,12 @@ public class ImageCoverCommand implements CommandExecutor, TabCompleter {
 			sender.sendMessage("§f/ic setplay <x> <y> <z> <世界名> <半径> <set名称>");
 			return true;
 		}
-		// 区域形式：前 3 个参数为数字
+		// 区域形式：前 3 个参数为数字（6 参时先判世界名，避免把名为 "1" 的玩家误判成区域）
+		if (rest.length == 6 && isDouble(rest[0]) && isDouble(rest[1]) && isDouble(rest[2])
+				&& plugin.resolveWorld(rest[3]) == null) {
+			sender.sendMessage("§c找不到世界: " + rest[3]);
+			return true;
+		}
 		if (isDouble(rest[0]) && isDouble(rest[1]) && isDouble(rest[2])) {
 			if (rest.length < 6) {
 				sender.sendMessage("§c区域播放需要: x y z 世界名 半径 set名称");
@@ -422,6 +444,16 @@ public class ImageCoverCommand implements CommandExecutor, TabCompleter {
 
 	private static double parseDouble(String s) {
 		return Double.parseDouble(s.trim());
+	}
+
+	/** 是否是一个合法的时长（秒，容忍结尾 s），用于识别被空格截断的链接 */
+	private static boolean isDuration(String s) {
+		try {
+			Durations.parseMillis(s);
+			return true;
+		} catch (NumberFormatException e) {
+			return false;
+		}
 	}
 
 	// ---------------------------------------------------------------- 补全
