@@ -10,12 +10,12 @@ softdepend:
   - Multiverse-Core
   - WorldGuard
 commands:
-  ic:
+  icv:
     description: "全屏图片演出 (需对应 Fabric 客户端 Mod: imagecover)"
-    usage: /ic play <玩家|UUID|@a|@p|@r> <图片链接> <时长秒> | /ic setplay <玩家|@a|@p|@r> <set名称>
+    usage: /icv play <玩家|UUID|@a|@p|@r> <图片链接> <时长秒> | /icv setplay <玩家|@a|@p|@r> <set名称>
     aliases: [imagecover]
     permission: imagecover.use
 permissions:
   imagecover.use:
-    description: 允许使用 /ic 全屏图片演出
+    description: 允许使用 /icv 全屏图片演出
     default: op

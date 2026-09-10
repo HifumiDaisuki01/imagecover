@@ -35,19 +35,22 @@ Boss 登场、公告海报等。支持**单图 / 预设列表(set) / 区域 / Wo
 把 `imagecover-client-1201-1.0.0.jar` 放进 `mods/`。
 **没装 Mod 的玩家收不到、也不会报错**，不影响服务端执行。
 
-> 权限：需要 **OP** 或 `imagecover.use` 权限才能执行 `/ic`。
+> 权限：需要 **OP** 或 `imagecover.use` 权限才能执行 `/icv`。
 
-## 命令（主命令 `/ic`，别名 `/imagecover`）
+> **⚠️ 命令变更**：主命令已从 `/ic` 改为 **`/icv`**。原因是 CMI 等插件会抢先占用
+> `/ic`，导致本插件命令被顶掉。`/imagecover` 仍可作为别名使用。
+
+## 命令（主命令 `/icv`，别名 `/imagecover`）
 
 ```
-/ic play <玩家|UUID|@a|@p|@r> <图片链接> <时长秒>
-/ic play <x> <y> <z> <世界名> <半径> <图片链接> <时长秒>
-/ic wgplay <WorldGuard区域名> <图片链接> <时长秒>
-/ic setplay <玩家|UUID|@a|@p|@r> <set名称>
-/ic setplay <x> <y> <z> <世界名> <半径> <set名称>
-/ic setwgplay <WorldGuard区域名> <set名称>
-/ic stop
-/ic reload
+/icv play <玩家|UUID|@a|@p|@r> <图片链接> <时长秒>
+/icv play <x> <y> <z> <世界名> <半径> <图片链接> <时长秒>
+/icv wgplay <WorldGuard区域名> <图片链接> <时长秒>
+/icv setplay <玩家|UUID|@a|@p|@r> <set名称>
+/icv setplay <x> <y> <z> <世界名> <半径> <set名称>
+/icv setwgplay <WorldGuard区域名> <set名称>
+/icv stop
+/icv reload
 ```
 
 - **时长支持小数**（如 `1.1` / `8.3`），单位秒，解析时容忍结尾的 `s`（如 `1.1s`）。
@@ -61,42 +64,42 @@ Boss 登场、公告海报等。支持**单图 / 预设列表(set) / 区域 / Wo
 
 ```
 # 指定玩家单图，显示 3.5 秒
-/ic play Steve https://cdn.example.com/boss.png 3.5
+/icv play Steve https://cdn.example.com/boss.png 3.5
 
 # 用 UUID 指定
-/ic play 069a79f4-44e9-4726-a5be-fca90e38aaf5 https://cdn.example.com/boss.png 3.5
+/icv play 069a79f4-44e9-4726-a5be-fca90e38aaf5 https://cdn.example.com/boss.png 3.5
 
 # 全员播放，1.1 秒
-/ic play @a https://cdn.example.com/announce.jpg 1.1
+/icv play @a https://cdn.example.com/announce.jpg 1.1
 
 # 以坐标为圆心、半径 50 格内的玩家播放
-/ic play 100 64 -200 world 50 https://cdn.example.com/cutscene.jpg 8.3
+/icv play 100 64 -200 world 50 https://cdn.example.com/cutscene.jpg 8.3
 
 # 世界名用 Multiverse 别名
-/ic play 0 80 0 lobby 30 https://cdn.example.com/welcome.jpg 5
+/icv play 0 80 0 lobby 30 https://cdn.example.com/welcome.jpg 5
 
 # WorldGuard 区域内玩家播放
-/ic wgplay arena_zone https://cdn.example.com/arena.jpg 4
+/icv wgplay arena_zone https://cdn.example.com/arena.jpg 4
 
 # 用预设列表
-/ic setplay @a testset01
-/ic setplay 0 64 0 world 40 testset01
-/ic setwgplay arena_zone testset01
+/icv setplay @a testset01
+/icv setplay 0 64 0 world 40 testset01
+/icv setwgplay arena_zone testset01
 
 # 停止自己屏幕上的图片（仅玩家可用，控制台执行会提示）
-/ic stop
+/icv stop
 
 # 修改 set.yml 后热重载
-/ic reload
+/icv reload
 ```
 
-> **PlaceholderAPI 示例**：`/ic play %player_name% https://.../hi.jpg 3`
+> **PlaceholderAPI 示例**：`/icv play %player_name% https://.../hi.jpg 3`
 > 由玩家执行时以该玩家为上下文（`%player_name%` 就是他自己）；
 > 由控制台/MM 执行时取**首位在线玩家**作为上下文。
 
 ## WorldGuard 区域演出
 
-`/ic wgplay <区域名> <图片链接> <时长秒>` 会对**当前位于该区域内的玩家**播放。特性：
+`/icv wgplay <区域名> <图片链接> <时长秒>` 会对**当前位于该区域内的玩家**播放。特性：
 
 - 区域名大小写不敏感（内部按 WorldGuard 规范转小写查询）。
 - 同名区域存在于多个世界时，**逐玩家用其所在世界的 RegionManager 判定**，互不影响。
@@ -104,7 +107,7 @@ Boss 登场、公告海报等。支持**单图 / 预设列表(set) / 区域 / Wo
 
 ## set.yml（预设播放列表）
 
-路径：`plugins/ImageCover/set.yml`，首次启用自动生成示例。修改后执行 `/ic reload` 生效。
+路径：`plugins/ImageCover/set.yml`，首次启用自动生成示例。修改后执行 `/icv reload` 生效。
 
 支持**两种写法，可混用**：
 
@@ -137,12 +140,12 @@ testset02:
 ### config.yml（单张图片指令的全局开关）
 `plugins/ImageCover/config.yml`：
 ```yaml
-# /ic play 与 /ic wgplay 是否启用淡入淡出
+# /icv play 与 /icv wgplay 是否启用淡入淡出
 fade: true
 # 淡入 / 淡出各自的时长（秒），可精确到 0.1
 fade-duration: 0.3
 ```
-改完执行 `/ic reload`（会同时重载 config.yml 与 set.yml）或重启生效。
+改完执行 `/icv reload`（会同时重载 config.yml 与 set.yml）或重启生效。
 
 ### set.yml（每个 set 独立开关）
 `setplay` / `setwgplay` 使用 set 自己的设置；set 里**没写 fade** 时沿用 config.yml 的全局值。
@@ -178,14 +181,14 @@ testset02:
 客户端按“覆盖全屏”缩放：保持比例、铺满屏幕、超出部分裁掉，居中显示。想不被裁切请用与
 屏幕比例接近（如 16:9）的图片。
 
-**Q：控制台执行 `/ic stop` 报错？**
-`/ic stop` 是**玩家停止自己屏幕**的命令，控制台没有“自己的屏幕”，因此会提示。
+**Q：控制台执行 `/icv stop` 报错？**
+`/icv stop` 是**玩家停止自己屏幕**的命令，控制台没有“自己的屏幕”，因此会提示。
 如需停某个玩家的，可在其客户端上执行，或让该玩家自行执行。
 
 **Q：`@p` 不能用？**
 `@p` 表示“执行者自己”，只能由玩家执行；控制台请用 `@a` 或指定玩家名/UUID。
 
-**Q：`/ic wgplay` 提示未安装 WorldGuard？**
+**Q：`/icv wgplay` 提示未安装 WorldGuard？**
 该子命令依赖 WorldGuard，装好后再试；其余命令无需 WorldGuard。
 
 **Q：`setplay` 提示找不到预设？**

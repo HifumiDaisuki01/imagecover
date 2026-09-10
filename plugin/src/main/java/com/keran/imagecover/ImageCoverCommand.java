@@ -22,15 +22,15 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * 命令解析（主命令 /ic，别名 /imagecover）：
- *   /ic play <玩家|UUID|@a|@p|@r> <图片链接> <时长秒>
- *   /ic play <x> <y> <z> <世界名> <半径> <图片链接> <时长秒>
- *   /ic wgplay <WorldGuard区域名> <图片链接> <时长秒>
- *   /ic setplay <玩家|UUID|@a|@p|@r> <set名称>
- *   /ic setplay <x> <y> <z> <世界名> <半径> <set名称>
- *   /ic setwgplay <WorldGuard区域名> <set名称>
- *   /ic stop
- *   /ic reload
+ * 命令解析（主命令 /icv —— 避开 CMI 等插件占用的 /ic，别名 /imagecover）：
+ *   /icv play <玩家|UUID|@a|@p|@r> <图片链接> <时长秒>
+ *   /icv play <x> <y> <z> <世界名> <半径> <图片链接> <时长秒>
+ *   /icv wgplay <WorldGuard区域名> <图片链接> <时长秒>
+ *   /icv setplay <玩家|UUID|@a|@p|@r> <set名称>
+ *   /icv setplay <x> <y> <z> <世界名> <半径> <set名称>
+ *   /icv setwgplay <WorldGuard区域名> <set名称>
+ *   /icv stop
+ *   /icv reload
  */
 public class ImageCoverCommand implements CommandExecutor, TabCompleter {
 	private final ImageCoverPlugin plugin;
@@ -76,8 +76,8 @@ public class ImageCoverCommand implements CommandExecutor, TabCompleter {
 	private boolean handlePlay(CommandSender sender, String[] args) {
 		String[] rest = slice(args, 1);
 		if (rest.length < 3) {
-			sender.sendMessage("§c用法: §f/ic play <玩家|UUID|@a|@p|@r> <图片链接> <时长秒>");
-			sender.sendMessage("§f/ic play <x> <y> <z> <世界名> <半径> <图片链接> <时长秒>");
+			sender.sendMessage("§c用法: §f/icv play <玩家|UUID|@a|@p|@r> <图片链接> <时长秒>");
+			sender.sendMessage("§f/icv play <x> <y> <z> <世界名> <半径> <图片链接> <时长秒>");
 			return true;
 		}
 		// 区域形式：前 3 个参数为数字
@@ -162,7 +162,7 @@ public class ImageCoverCommand implements CommandExecutor, TabCompleter {
 	private boolean handleWgPlay(CommandSender sender, String[] args) {
 		String[] rest = slice(args, 1);
 		if (rest.length < 3) {
-			sender.sendMessage("§c用法: §f/ic wgplay <WorldGuard区域名> <图片链接> <时长秒>");
+			sender.sendMessage("§c用法: §f/icv wgplay <WorldGuard区域名> <图片链接> <时长秒>");
 			return true;
 		}
 		String regionName = rest[0];
@@ -193,8 +193,8 @@ public class ImageCoverCommand implements CommandExecutor, TabCompleter {
 	private boolean handleSetPlay(CommandSender sender, String[] args) {
 		String[] rest = slice(args, 1);
 		if (rest.length < 2) {
-			sender.sendMessage("§c用法: §f/ic setplay <玩家|UUID|@a|@p|@r> <set名称>");
-			sender.sendMessage("§f/ic setplay <x> <y> <z> <世界名> <半径> <set名称>");
+			sender.sendMessage("§c用法: §f/icv setplay <玩家|UUID|@a|@p|@r> <set名称>");
+			sender.sendMessage("§f/icv setplay <x> <y> <z> <世界名> <半径> <set名称>");
 			return true;
 		}
 		// 区域形式：前 3 个参数为数字（6 参时先判世界名，避免把名为 "1" 的玩家误判成区域）
@@ -246,7 +246,7 @@ public class ImageCoverCommand implements CommandExecutor, TabCompleter {
 	private boolean handleSetWgPlay(CommandSender sender, String[] args) {
 		String[] rest = slice(args, 1);
 		if (rest.length < 2) {
-			sender.sendMessage("§c用法: §f/ic setwgplay <WorldGuard区域名> <set名称>");
+			sender.sendMessage("§c用法: §f/icv setwgplay <WorldGuard区域名> <set名称>");
 			return true;
 		}
 		String regionName = rest[0];
@@ -262,7 +262,7 @@ public class ImageCoverCommand implements CommandExecutor, TabCompleter {
 
 	private boolean handleStop(CommandSender sender) {
 		if (!(sender instanceof Player player)) {
-			sender.sendMessage("§c/ic stop 只能由玩家执行（用于停止自己屏幕上的图片）");
+			sender.sendMessage("§c/icv stop 只能由玩家执行（用于停止自己屏幕上的图片）");
 			return true;
 		}
 		plugin.sendStop(player);
@@ -409,13 +409,13 @@ public class ImageCoverCommand implements CommandExecutor, TabCompleter {
 
 	private void help(CommandSender sender) {
 		sender.sendMessage("§6ImageCover §7- 全屏图片演出");
-		sender.sendMessage("§f/ic play <玩家|UUID|@a|@p|@r> <图片链接> <时长秒>");
-		sender.sendMessage("§f/ic play <x> <y> <z> <世界名> <半径> <图片链接> <时长秒>");
-		sender.sendMessage("§f/ic wgplay <WorldGuard区域名> <图片链接> <时长秒>");
-		sender.sendMessage("§f/ic setplay <玩家|UUID|@a|@p|@r> <set名称>");
-		sender.sendMessage("§f/ic setplay <x> <y> <z> <世界名> <半径> <set名称>");
-		sender.sendMessage("§f/ic setwgplay <WorldGuard区域名> <set名称>");
-		sender.sendMessage("§f/ic stop §7(停止自己屏幕上的图片)   §f/ic reload §7(重载 set.yml)");
+		sender.sendMessage("§f/icv play <玩家|UUID|@a|@p|@r> <图片链接> <时长秒>");
+		sender.sendMessage("§f/icv play <x> <y> <z> <世界名> <半径> <图片链接> <时长秒>");
+		sender.sendMessage("§f/icv wgplay <WorldGuard区域名> <图片链接> <时长秒>");
+		sender.sendMessage("§f/icv setplay <玩家|UUID|@a|@p|@r> <set名称>");
+		sender.sendMessage("§f/icv setplay <x> <y> <z> <世界名> <半径> <set名称>");
+		sender.sendMessage("§f/icv setwgplay <WorldGuard区域名> <set名称>");
+		sender.sendMessage("§f/icv stop §7(停止自己屏幕上的图片)   §f/icv reload §7(重载 set.yml)");
 	}
 
 	private static String[] slice(String[] args, int from) {

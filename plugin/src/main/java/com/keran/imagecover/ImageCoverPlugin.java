@@ -42,11 +42,11 @@ public class ImageCoverPlugin extends JavaPlugin {
 		Bukkit.getMessenger().registerOutgoingPluginChannel(this, CHANNEL_STOP);
 
 		ImageCoverCommand cmd = new ImageCoverCommand(this);
-		if (getCommand("ic") != null) {
-			getCommand("ic").setExecutor(cmd);
-			getCommand("ic").setTabCompleter(cmd);
+		if (getCommand("icv") != null) {
+			getCommand("icv").setExecutor(cmd);
+			getCommand("icv").setTabCompleter(cmd);
 		} else {
-			getLogger().severe("命令 'ic' 未在 plugin.yml 中注册，命令不可用！");
+			getLogger().severe("命令 'icv' 未在 plugin.yml 中注册，命令不可用！");
 		}
 
 		getLogger().info("ImageCover 已启用，通道: " + CHANNEL_PLAY + " / " + CHANNEL_STOP);

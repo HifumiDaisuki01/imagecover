@@ -1,6 +1,6 @@
 # ImageCover 配置
 #
-# 单张图片指令（/ic play、/ic wgplay）的淡入淡出开关。
+# 单张图片指令（/icv play、/icv wgplay）的淡入淡出开关。
 # setplay / setwgplay 不受这里影响，它们在 set.yml 中按每个 set 单独设置
 # （未写的 set 沿用这里的默认值）。
 fade: true
