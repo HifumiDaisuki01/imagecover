@@ -1,5 +1,5 @@
 name: ImageCover
-version: '1.0.1'
+version: '1.0.2'
 main: com.keran.imagecover.ImageCoverPlugin
 api-version: '1.20'
 prefix: ImageCover

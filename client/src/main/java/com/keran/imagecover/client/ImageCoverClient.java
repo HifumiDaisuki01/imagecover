@@ -40,8 +40,8 @@ public class ImageCoverClient implements ClientModInitializer {
 	@Override
 	public void onInitializeClient() {
 		// 注意：这里刻意不注册 HudRenderCallback。
-		// 它的触发时机早于聊天框渲染，会导致全屏图片被左下角聊天框遮挡；
-		// 现在改由 GuiMixin 注入 Gui.render() 的末尾来绘制，
+		// 它的触发时机早于聊天框渲染，会导致全屏图片被左下角聊天框遮挡（看起来像被"挖掉一块"）；
+		// 现在改由 GuiMixin 锚定 GameRenderer 调用 Gui.render() 之后来绘制，
 		// 保证图片盖在所有 HUD 元素之上（见 ImageOverlay#renderTopmost）。
 
 		ClientPlayNetworking.registerGlobalReceiver(PLAY_CHANNEL, (client, handler, buf, responseSender) -> {

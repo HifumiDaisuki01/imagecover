@@ -2,7 +2,6 @@ package com.keran.imagecover.client;
 
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.systems.RenderSystem;
-import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.texture.DynamicTexture;
@@ -23,15 +22,19 @@ import java.util.concurrent.Executors;
  * 全屏图片覆盖层：按顺序播放一组图片，每张显示指定时长（淡入/淡出时长由服务端下发，0 表示关闭），
  * 全部播完自动消失；收到 stop 立刻清空并隐藏。
  *
- * <p>渲染入口是 {@link #renderTopmost(GuiGraphics)}，由 {@code GuiMixin} 注入
- * {@code Gui.render()} 末尾调用，保证图片画在聊天框、计分板等所有 HUD 之上。</p>
+ * <p>渲染入口是 {@link #renderTopmost(GuiGraphics)}，由 {@code GuiMixin} 在
+ * {@code Gui.render()} 返回之后调用，保证图片画在聊天框、计分板等所有 HUD 之上。</p>
+ *
+ * <p><b>刻意不实现 {@code HudRenderCallback}</b>：它的触发时机早于聊天框渲染，
+ * 在这里画图会直接导致图片被聊天框「挖掉一块」。所有绘制只走
+ * {@link #renderTopmost(GuiGraphics)} 这一条路径。</p>
  *
  * 线程模型：
  *  - 下载/解码在后台线程（download + NativeImage 解码）
  *  - 纹理注册、播放状态、渲染都在主线程（Minecraft.execute）
  *  - generation 代次号用于丢弃 stop/新指令之后才回来的过期结果，避免纹理泄漏
  */
-public final class ImageOverlay implements HudRenderCallback {
+public final class ImageOverlay {
 	public static final ImageOverlay INSTANCE = new ImageOverlay();
 
 	private static final Logger LOGGER = LoggerFactory.getLogger("imagecover");
@@ -86,6 +89,12 @@ public final class ImageOverlay implements HudRenderCallback {
 	private long startMs = 0L;
 	private boolean active = false;
 	private long generation = 0L;
+	/**
+	 * 上次绘制的纳秒时间戳。{@code GuiMixin} 挂了「主锚点 + 兜底」两个注入点，
+	 * 用 1ms 时间窗口去重，保证同一帧最多画一次，避免重复 blit 导致的叠加变深。
+	 * 用纳秒时间而非 Minecraft 帧计数，是为了不依赖可能随版本变化的 API。
+	 */
+	private long lastRenderNs = 0L;
 
 	private ImageOverlay() {}
 
@@ -135,23 +144,10 @@ public final class ImageOverlay implements HudRenderCallback {
 	// --------------------------------------------------------------- 渲染
 
 	/**
-	 * @deprecated 保留 Fabric 的 HUD 回调仅为兼容，
-	 * 实际渲染走 {@link #renderTopmost(GuiGraphics)}（由 GuiMixin 在所有 HUD 之后调用）。
-	 *
-	 * <p>这里刻意不做任何绘制：HudRenderCallback 的时机早于聊天框，
-	 * 在这里画会导致图片被聊天框遮挡。</p>
-	 */
-	@Override
-	@Deprecated
-	public void onHudRender(GuiGraphics g, float tickDelta) {
-		// 空实现，见上面的说明
-	}
-
-	/**
 	 * 在所有 HUD 元素（含聊天框、计分板、Tab 列表）之后渲染。
 	 *
-	 * <p>由 {@code GuiMixin} 注入 {@code Gui.render()} 的 TAIL 调用，
-	 * 因此这里的绘制一定盖在最上层。</p>
+	 * <p>由 {@code GuiMixin} 锚定 {@code GameRenderer} 调用 {@code Gui.render()} 之后触发，
+	 * 此时聊天框等 HUD 已全部绘制完毕，因此这里的绘制一定盖在最上层。</p>
 	 *
 	 * <p>注意：本方法只在主线程被调用，因此可以安全地读写播放状态。</p>
 	 */
@@ -161,6 +157,13 @@ public final class ImageOverlay implements HudRenderCallback {
 		if (mc.options.hideGui) return;
 		// 打开任何界面（背包、菜单等）时不绘制，避免盖住 UI 导致玩家无法操作
 		if (mc.screen != null) return;
+
+		// 一帧只画一次：主锚点与兜底注入点可能在同一帧都被调用，
+		// 重复 blit 会让半透明区域叠加、淡出看起来"发暗卡顿"。
+		// 用 1ms 窗口判定"同一帧"（60fps 约 16.7ms，1ms 不会误伤相邻帧）。
+		long nowNs = System.nanoTime();
+		if (nowNs - lastRenderNs < 1_000_000L) return;
+		lastRenderNs = nowNs;
 
 		Entry cur = entries.get(index);
 		if (startMs == 0L) {
@@ -218,6 +221,9 @@ public final class ImageOverlay implements HudRenderCallback {
 		// 恢复渲染状态
 		RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
 		RenderSystem.disableBlend();
+		// 显式落屏：GuiGraphics 是批处理的，不 flush 的话顶点可能滞留到下一帧，
+		// 导致图片延迟一帧出现、或在状态切换时丢失。这里是本帧最后一次绘制，立即提交。
+		g.flush();
 	}
 
 	/** 进入下一张（跳过加载失败的）；没有下一张则结束（主线程） */
@@ -346,6 +352,22 @@ public final class ImageOverlay implements HudRenderCallback {
 	// --------------------------------------------------------------- 网络/解码
 
 	private static byte[] download(String url) {
+		// 本地文件（file: 或裸路径）直接读取：便于调试与局域网共享目录。
+		try {
+			if (url.startsWith("file:") || url.startsWith("/")) {
+				java.io.File f = url.startsWith("file:") ? new java.io.File(java.net.URI.create(url)) : new java.io.File(url);
+				if (!f.isFile()) {
+					LOGGER.warn("本地图片不存在: {}", f);
+					return null;
+				}
+				try (InputStream in = new java.io.FileInputStream(f)) {
+					return in.readAllBytes();
+				}
+			}
+		} catch (Exception ex) {
+			LOGGER.warn("本地图片读取失败 {}: {}", url, ex.toString());
+			return null;
+		}
 		HttpURLConnection conn = null;
 		try {
 			conn = (HttpURLConnection) new URL(url).openConnection();

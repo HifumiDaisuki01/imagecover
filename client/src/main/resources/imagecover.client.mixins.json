@@ -8,5 +8,6 @@
   ],
   "injectors": {
     "defaultRequire": 1
-  }
+  },
+  "refmap": "imagecover-client-1201-refmap.json"
 }

@@ -9,8 +9,8 @@ Boss 登场、公告海报等。支持**单图 / 预设列表(set) / 区域 / Wo
 
 | 端 | 文件 | 说明 |
 | --- | --- | --- |
-| 服务端 | `ImageCover-1.0.1.jar` | Paper 1.20.1 插件（放 `plugins/`） |
-| 客户端 | `imagecover-client-1201-1.0.4.jar` | 1.20.1 Fabric 客户端 Mod（放 `mods/`，需 Fabric API） |
+| 服务端 | `ImageCover-1.0.2.jar` | Paper 1.20.1 插件（放 `plugins/`） |
+| 客户端 | `imagecover-client-1201-1.0.5.jar` | 1.20.1 Fabric 客户端 Mod（放 `mods/`，需 Fabric API） |
 
 两端通过 Fabric 插件消息通道通信：
 
@@ -29,7 +29,7 @@ Boss 登场、公告海报等。支持**单图 / 预设列表(set) / 区域 / Wo
 ## 安装
 
 ### 服务端（Paper 1.20.1）
-1. 把 `ImageCover-1.0.1.jar` 放进 `plugins/`，重启服务器。
+1. 把 `ImageCover-1.0.2.jar` 放进 `plugins/`，重启服务器。
 2. 首次启动会在 `plugins/ImageCover/` 自动生成示例 `set.yml`。
 3. 可选软依赖（不装也能用，装了自动启用）：
    - **PlaceholderAPI**：命令参数支持 `%占位符%`（如 `%player_name%`）。
@@ -38,7 +38,7 @@ Boss 登场、公告海报等。支持**单图 / 预设列表(set) / 区域 / Wo
 
 ### 客户端
 每位需要看到图片的玩家，在 **1.20.1 Fabric** 环境（Fabric Loader 0.15+、Fabric API 0.92+、Java 17+）
-把 `imagecover-client-1201-1.0.4.jar` 放进 `mods/`。
+把 `imagecover-client-1201-1.0.5.jar` 放进 `mods/`。
 **没装 Mod 的玩家收不到、也不会报错**，不影响服务端执行。
 
 > 权限：需要 **OP** 或 `imagecover.use` 权限才能执行 `/icv`。
@@ -147,10 +147,30 @@ testset02:
 图片会被绘制在**所有 HUD 元素之上** —— 包括聊天框、计分板侧边栏、Tab 玩家列表。
 因此左下角刷聊天消息时，图片**不会被聊天框截断**。
 
-实现方式：客户端用 Mixin 注入 `Gui.render()` 的末尾（`@At("TAIL")`），
-在所有原版 HUD 绘制完成后才画图片。这是唯一可靠的置顶方式 ——
-Fabric 的 `HudRenderCallback` 与 `WorldRenderEvents.LAST` 都触发在聊天框**之前**，
-用它们会导致图片被聊天框遮挡（v1.0.2 及以前的问题）。
+实现方式：客户端用 Mixin 注入 `Gui.render()` 内部、**自动保存指示器渲染之后**
+（`@At(value = "INVOKE", target = "...Gui;renderSavingIndicator(...)", shift = AFTER)`），
+并额外挂一个 `@At("TAIL")` 兜底。此时聊天框、计分板、Tab 列表在内的**所有**
+原版 HUD 都已绘制完成，图片必然盖在最上层。
+
+`Gui.render()` 的实际渲染顺序（1.20.1 字节码实测）：
+
+```
+聊天框(1421) → Tab 玩家列表(1518) → 自动保存指示器(1534) → return(1537)
+                                      ↑ 注入点
+```
+
+这是唯一可靠的置顶方式 —— Fabric 的 `HudRenderCallback` 与 `WorldRenderEvents.LAST`
+都触发在聊天框**之前**，用它们会导致图片被聊天框遮挡（v1.0.3 及以前的问题）。
+
+> **为什么不用 `GameRenderer`？** 曾尝试注入 `GameRenderer.render` 中调用 `Gui.render`
+> 之后的位置，但 `GameRenderer` 存在同名重载（`render(float,long,boolean)` 与
+> `render(GuiGraphics,float)`），Mixin 会因描述符歧义导致**整个类加载崩溃**。
+> 因此回到 `Gui` 内部注入，并选择**单参数、无重载歧义**的
+> `renderSavingIndicator(GuiGraphics)` 作为锚点，refmap 解析 100% 可靠。
+>
+> **排查提示**：若升级后图片仍被聊天框截断，请检查 `mods/` 目录是否残留旧版本
+> 的 `imagecover-client-*.jar`。多个版本同时存在时，旧版的 `HudRenderCallback`
+> 仍然生效，会导致聊天框继续遮挡图片。
 
 > **注意**：演出期间图片会铺满整个屏幕。默认**不铺背景遮罩**，因此图片中透明/半透明的
 > 区域会直接透出游戏画面（透明背景的 PNG 可用于"提示文本覆盖在游戏上"）。
@@ -236,9 +256,21 @@ testset02:
 ③ 图片直链要能在浏览器直接打开、支持 https、格式为 jpg/png 等常见格式；
 ④ 区域命令的“世界名”要和服务器实际世界名一致（装了 Multiverse 也支持别名）。
 
+**Q：聊天框还是在图片上"挖掉一块"？（v1.0.3 及以前）**
+两个原因，逐一排查：
+
+1. **`mods/` 里有多个版本的 imagecover**（最常见）。
+   旧版的 `HudRenderCallback` 仍然生效，会导致聊天框继续遮挡图片。
+   请删掉 `mods/` 下所有 `imagecover-client-*.jar`，只留 `1.0.5`。
+2. **注入点缺陷（v1.0.3 的问题）**。v1.0.3 只挂了 `@At("TAIL")`；
+   v1.0.5 改为精确锚定 `renderSavingIndicator`（聊天框之后的最后一个 HUD 操作）
+   并加 TAIL 兜底，同时移除了 `HudRenderCallback` 的所有残留引用。
+
+> 验证方法：进游戏后刷一批聊天消息，左下角应**完全被图片覆盖**、看不到任何聊天文字。
+
 **Q：淡入淡出看不出来？（v1.0.3 及以前）**
 这是全屏黑底造成的错觉，不是 alpha 没生效 —— 图片淡出时透出的是同样在淡出的黑底，
-两者几乎同色所以看不出来。**升级到 v1.0.4 客户端 + v1.0.1 服务端**后背景遮罩默认关闭，
+两者几乎同色所以看不出来。**升级到 v1.0.5 客户端 + v1.0.2 服务端**后背景遮罩默认关闭，
 淡入淡出即清晰可见。详见"背景遮罩"章节。
 
 **Q：透明 PNG 透不出游戏画面？**
@@ -275,7 +307,7 @@ testset02:
 ```bash
 cd imagecover-plugin
 JAVA_HOME=<JDK17+> gradle build --no-daemon
-# 产物: build/libs/ImageCover-1.0.1.jar
+# 产物: build/libs/ImageCover-1.0.2.jar
 ```
 依赖（compileOnly）：`io.papermc.paper:paper-api:1.20.1-R0.1-SNAPSHOT`、
 `me.clip:placeholderapi:2.11.6`、`com.sk89q.worldguard:worldguard-bukkit:7.0.9`、
@@ -285,7 +317,7 @@ JAVA_HOME=<JDK17+> gradle build --no-daemon
 ```bash
 cd imagecover-client-1201
 JAVA_HOME=<JDK17+> gradle build --no-daemon
-# 产物: build/libs/imagecover-client-1201-1.0.4.jar
+# 产物: build/libs/imagecover-client-1201-1.0.5.jar
 ```
 Fabric Loom 1.7.4 + Mojang 官方映射（mojmap）+ Fabric API `0.92.12+1.20.1` + Loader `0.19.5`。
 
@@ -303,8 +335,9 @@ imagecover-plugin/            服务端插件源码
 
 imagecover-client-1201/       客户端 Mod 源码
   src/main/java/com/keran/imagecover/client/
-    ImageCoverClient.java     入口：注册通道 icb:play / icb:stop + HUD 回调
+    ImageCoverClient.java     入口：注册通道 icb:play / icb:stop（协议 v1/v2 兼容）
     ImageOverlay.java         下载/解码/纹理/全屏渲染/淡入淡出/预加载/清理
+    mixin/GuiMixin.java       注入 Gui.render 置顶绘制（聊天框之上）
   src/main/resources/fabric.mod.json
 ```
 
