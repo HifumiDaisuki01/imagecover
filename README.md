@@ -5,9 +5,9 @@ Boss 登场、公告海报等。支持**单图 / 预设列表(set) / 区域 / Wo
 可设置每张图的显示时长（支持小数秒），并带 0.3s 淡入淡出，播完自动消失。
 **默认不铺背景遮罩**，透明背景的 PNG 可以直接覆盖在游戏画面上（适合做提示文本/UI 覆盖层）。
 
-[![Minecraft](https://img.shields.io/badge/Minecraft-%s-green.svg)](https://papermc.io)
-[![Paper](https://img.shields.io/badge/Paper-%s-blue.svg)](https://papermc.io)
-[![Java](https://img.shields.io/badge/Java-%s-orange.svg)](https://adoptium.net)
+[![Minecraft](https://img.shields.io/badge/Minecraft-1.20.1-green.svg)](https://papermc.io)
+[![Paper](https://img.shields.io/badge/Paper-1.20.1-blue.svg)](https://papermc.io)
+[![Java](https://img.shields.io/badge/Java-17-orange.svg)](https://adoptium.net)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ## 组件
