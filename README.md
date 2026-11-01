@@ -321,7 +321,7 @@ JAVA_HOME=<JDK17+> gradle build --no-daemon
 
 ### 客户端 Mod
 ```bash
-cd imagecover-client-1201
+cd client
 JAVA_HOME=<JDK17+> gradle build --no-daemon
 # 产物: build/libs/imagecover-client-1201-1.0.5.jar
 ```
@@ -339,7 +339,7 @@ plugin/                      服务端插件源码
     PlaceholderApiBridge.java PAPI 软依赖桥
   src/main/resources/plugin.yml, set.yml
 
-imagecover-client-1201/       客户端 Mod 源码
+client/                      客户端 Mod 源码
   src/main/java/com/keran/imagecover/client/
     ImageCoverClient.java     入口：注册通道 icb:play / icb:stop（协议 v1/v2 兼容）
     ImageOverlay.java         下载/解码/纹理/全屏渲染/淡入淡出/预加载/清理
