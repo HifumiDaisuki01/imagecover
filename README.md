@@ -311,7 +311,7 @@ testset02:
 
 ### 服务端插件
 ```bash
-cd imagecover-plugin
+cd plugin
 JAVA_HOME=<JDK17+> gradle build --no-daemon
 # 产物: build/libs/ImageCover-1.0.2.jar
 ```
@@ -330,7 +330,7 @@ Fabric Loom 1.7.4 + Mojang 官方映射（mojmap）+ Fabric API `0.92.12+1.20.1`
 ## 目录结构
 
 ```
-imagecover-plugin/            服务端插件源码
+plugin/                      服务端插件源码
   src/main/java/com/keran/imagecover/
     ImageCoverPlugin.java     主类：注册通道、set.yml、世界解析
     ImageCoverCommand.java    命令解析（play/setplay/wgplay/setwgplay/stop/reload）
